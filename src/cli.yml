@@ -1,0 +1,15 @@
+name: stock
+version: "0.1.0"
+author: Matt Sarmiento <matthewcs@me.com>
+about: Gets the adjusted closing price of a stock.
+args:
+  - symbol:
+      short: s
+      long: symbol
+      help: Sets the stock symbol 
+      takes_value: true
+  - date:
+      short: d
+      long: date
+      help: Sets the date
+      takes_value: true

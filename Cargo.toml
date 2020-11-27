@@ -1,0 +1,10 @@
+[package]
+name = "rustock"
+version = "0.1.0"
+authors = ["msarmi9 <matthewcs@me.com>"]
+edition = "2018"
+
+[dependencies]
+chrono = "0.4.19"
+clap = {version = "2.27.0", features = ["yaml"]}
+yahoo_finance_api = {version = "1.0.2", features = ["blocking"]}
