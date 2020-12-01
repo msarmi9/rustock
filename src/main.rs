@@ -36,10 +36,13 @@ fn moving_average(series: &[f64], n: usize) -> Vec<f64> {
 fn main() {
     let yaml = load_yaml!("cli.yml");
     let args = App::from_yaml(yaml).get_matches();
-    let symbol = args.value_of("symbol").unwrap();
-    let date = args.value_of("date").unwrap();
 
-    let start = date.parse::<DateTime<Utc>>().unwrap();
+    // Safe to unwrap as these args are required
+    let symbol = args.value_of("symbol").unwrap();
+    let from = args.value_of("from").unwrap();
+
+    //TODO: validate start date (must be >= 30 days prior to today)
+    let start = from.parse::<DateTime<Utc>>().expect("Could not parse --from date");
     let end = Utc::now();
 
     let provider = yahoo::YahooConnector::new();
@@ -56,5 +59,5 @@ fn main() {
     let avg = avgs.last().unwrap();
 
     println!("period start,symbol,price,change %,min,max,30d avg");
-    println!("{},{},${:.2},{:.2}%,${:.2},${:.2},{:.2}", date, symbol, price, change, min, max, avg);
+    println!("{},{},${:.2},{:.2}%,${:.2},${:.2},${:.2}", from, symbol, price, change, min, max, avg);
 }
