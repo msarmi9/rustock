@@ -1,15 +1,17 @@
 name: stock
 version: "0.1.0"
 author: Matt Sarmiento <matthewcs@me.com>
-about: Gets the adjusted closing price of a stock.
+about: Gets information on a stock's price from the given date to the current date.
 args:
   - symbol:
       short: s
       long: symbol
       help: Sets the stock symbol 
       takes_value: true
-  - date:
-      short: d
-      long: date
-      help: Sets the date
+      required: true
+  - from:
+      short: f
+      long: from
+      help: Sets the period start date
       takes_value: true
+      required: true
