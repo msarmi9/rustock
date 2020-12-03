@@ -6,30 +6,41 @@ use clap::App;
 use yahoo_finance_api as yahoo;
 
 
-fn min(series: &[f64]) -> f64 {
-    series.iter().fold(f64::MAX, |x, &y| if x <= y { x } else { y })
-}
-
-
-fn max(series: &[f64]) -> f64 {
-    series.iter().fold(f64::MIN, |x, &y| if x >= y { x } else { y })
-}
-
-
-fn percent_change(series: &[f64]) -> f64 {
-    let (first, last) = (series.first().unwrap(), series.last().unwrap());
-    100. * (last - first) / first
-}
-
-
-fn moving_average(series: &[f64], n: usize) -> Vec<f64> {
-    let mut avgs = Vec::new();
-    for w in series.windows(n) {
-        let sum: f64 = Iterator::sum(w.iter());
-        let avg = sum / (w.len() as f64);
-        avgs.push(avg);
+fn min(series: &[f64]) -> Option<f64> {
+    if series.is_empty() {
+        None
+    } else {
+        Some(series.iter().fold(f64::MAX, |a, &b| a.min(b)))
     }
-    avgs
+}
+
+
+fn max(series: &[f64]) -> Option<f64> {
+    if series.is_empty() {
+        None
+    } else {
+        Some(series.iter().fold(f64::MIN, |a, &b| a.max(b)))
+    }
+}
+
+
+fn percent_change(series: &[f64]) -> Option<f64> {
+    if series.is_empty() {
+        None
+    } else {
+        let (first, last) = (series.first().unwrap(), series.last().unwrap());
+        let first = if *first == 0. { 1. } else { *first };
+        Some(100. * (last - first) / first)
+    }
+}
+
+
+fn moving_average(series: &[f64], n: usize) -> Option<Vec<f64>> {
+    if series.is_empty() || n == 0 {
+        None
+    } else {
+        Some(series.windows(n).map(|w| w.iter().sum::<f64>() / (w.len() as f64)).collect())
+    }
 }
 
 
@@ -41,23 +52,27 @@ fn main() {
     let symbol = args.value_of("symbol").unwrap();
     let from = args.value_of("from").unwrap();
 
-    //TODO: validate start date (must be >= 30 days prior to today)
     let start = from.parse::<DateTime<Utc>>().expect("Could not parse --from date");
     let end = Utc::now();
 
     let provider = yahoo::YahooConnector::new();
-    let response = provider.get_quote_history(symbol, start, end).unwrap();
-    let quotes = response.quotes().unwrap();
+    if let Ok(response) = provider.get_quote_history(symbol, start, end) {
+        if let Ok(quotes) = response.quotes() {
+            let adjcloses = quotes.iter().map(|q| q.adjclose).collect::<Vec<_>>();
+            let price = adjcloses.last().unwrap_or(&0.);
+            let min = min(&adjcloses).unwrap_or_default();
+            let max = max(&adjcloses).unwrap_or_default();
+            let change = percent_change(&adjcloses).unwrap_or_default();
+            let avgs = moving_average(&adjcloses, 30).unwrap_or_default();
+            let avg = avgs.last().unwrap_or(&0.);
 
-    let adjcloses = quotes.iter().map(|x| x.adjclose).collect::<Vec<_>>();
-    let price = adjcloses.last().unwrap();
-    let min = min(&adjcloses);
-    let max = max(&adjcloses);
-    let change = percent_change(&adjcloses);
-
-    let avgs = moving_average(&adjcloses, 30);
-    let avg = avgs.last().unwrap();
-
-    println!("period start,symbol,price,change %,min,max,30d avg");
-    println!("{},{},${:.2},{:.2}%,${:.2},${:.2},${:.2}", from, symbol, price, change, min, max, avg);
+            println!("period start,symbol,price,change %,min,max,30d avg");
+            println!("{},{},${:.2},{:.2}%,${:.2},${:.2},${:.2}", from, symbol, price, change, min, max, avg);
+        } else {
+            eprintln!("No quotes found for symbol: {}", symbol);
+        }
+    } else {
+        eprintln!("Could not get response from yahoo finance api.");
+    }
 }
+ 
